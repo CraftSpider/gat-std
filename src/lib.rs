@@ -39,38 +39,49 @@ pub mod iter;
 
 #[doc(hidden)]
 pub mod __impl {
-    pub trait IdxRef<I> {
-        type Output<'a> where Self: 'a;
-        fn __index(&self, idx: I) -> Self::Output<'_>;
-    }
-    pub trait IdxMut<I> {
-        type Output<'a> where Self: 'a;
-        fn __index(&mut self, idx: I) -> Self::Output<'_>;
+    pub struct IntoIter<T>(pub T);
+
+    pub trait ViaLending {
+        type Selector;
+
+        fn select(&self) -> Self::Selector;
     }
 
-    impl<I, T> IdxRef<I> for T
-    where
-        T: crate::ops::Index<I>
-    {
-        type Output<'a> = T::Output<'a>
-        where
-            Self: 'a;
+    impl<T: crate::iter::IntoIterator> ViaLending for &IntoIter<T> {
+        type Selector = Lending;
 
-        fn __index(&self, idx: I) -> Self::Output<'_> {
-            T::index(self, idx)
+        fn select(&self) -> Self::Selector {
+            Lending
         }
     }
 
-    impl<I, T> IdxMut<I> for T
-    where
-        T: crate::ops::IndexMut<I>
-    {
-        type Output<'a> = T::OutputMut<'a>
-        where
-            Self: 'a;
+    pub trait ViaCore {
+        type Selector;
 
-        fn __index(&mut self, idx: I) -> Self::Output<'_> {
-            T::index_mut(self, idx)
+        fn select(&self) -> Self::Selector;
+    }
+
+    impl<T: core::iter::IntoIterator> ViaCore for IntoIter<T> {
+        type Selector = Core;
+
+        fn select(&self) -> Self::Selector {
+            Core
+        }
+    }
+
+    pub struct Lending;
+
+    impl Lending {
+        pub fn into_iter<'a, T: crate::iter::IntoIterator>(self, iter: IntoIter<T>) -> T::IntoIter<'a> {
+            iter.0.into_iter()
+        }
+    }
+
+    pub struct Core;
+
+    impl Core {
+        pub fn into_iter<T: core::iter::IntoIterator>(self, iter: IntoIter<T>) -> T::IntoIter {
+            iter.0.into_iter()
         }
     }
 }

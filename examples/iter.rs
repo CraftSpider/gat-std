@@ -32,3 +32,15 @@ fn main() {
             println!("{}", *val)
         });
 }
+
+fn foo() {
+    use gat_std::__impl::{IntoIter, ViaLending, ViaCore};
+
+    let val = IntoIter(0..1);
+    let selector = (&&val).select();
+    let iter = selector.into_iter(val);
+
+    let val = IntoIter(Custom::new());
+    let selector = (&&val).select();
+    let iter = selector.into_iter(val);
+}

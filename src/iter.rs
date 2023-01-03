@@ -87,23 +87,6 @@ pub trait Iterator {
     }
 }
 
-impl<T> Iterator for T
-where
-    T: core::iter::Iterator,
-{
-    type Item<'a> = T::Item
-    where
-        Self: 'a;
-
-    fn next(&mut self) -> Option<Self::Item<'_>> {
-        <Self as core::iter::Iterator>::next(self)
-    }
-
-    fn size_hint(&self) -> (usize, Option<usize>) {
-        <Self as core::iter::Iterator>::size_hint(self)
-    }
-}
-
 /// Trait for values which can be converted into an [`Iterator`]
 pub trait IntoIterator {
     /// The item yielded by the returned iterator
@@ -122,48 +105,21 @@ pub trait IntoIterator {
         Self: 'a;
 }
 
-#[cfg(feature = "alloc")]
-impl<T> IntoIterator for alloc::vec::Vec<T> {
-    type Item<'a> = T
+impl<T> IntoIterator for T
+where
+    T: Iterator,
+{
+    type Item<'a> = T::Item<'a>
     where
         Self: 'a;
-    type IntoIter<'a> = alloc::vec::IntoIter<T>
+    type IntoIter<'a> = T
     where
         Self: 'a;
 
     fn into_iter<'a>(self) -> Self::IntoIter<'a>
     where
-        Self: 'a,
+        Self: 'a
     {
-        <Self as core::iter::IntoIterator>::into_iter(self)
-    }
-}
-
-impl IntoIterator for core::ops::Range<usize> {
-    type Item<'a> = usize;
-
-    type IntoIter<'a> = core::ops::Range<usize> where Self: 'a ;
-
-    fn into_iter<'a>(self) -> Self::IntoIter<'a> where Self: 'a {
         self
     }
 }
-
-// impl<T> IntoIterator for T
-// where
-//     T: Iterator,
-// {
-//     type Item<'a> = T::Item<'a>
-//     where
-//         Self: 'a;
-//     type IntoIter<'a> = T
-//     where
-//         Self: 'a;
-//
-//     fn into_iter<'a>(self) -> Self::IntoIter<'a>
-//     where
-//         Self: 'a
-//     {
-//         self
-//     }
-// }

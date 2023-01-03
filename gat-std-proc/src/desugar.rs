@@ -19,11 +19,22 @@ impl Visitor {
         let pat = &expr.pat;
         let iter = &expr.expr;
         let body = &expr.body;
+        let val_spanned = quote_spanned!(
+            iter.span() =>
+            _iter.next()
+        );
+
         let new_expr: Expr = syn::parse2(quote_spanned!(
             expr.span() =>
+            #[allow(unused_imports)]
             {
-                let mut _iter = ::gat_std::iter::IntoIterator::into_iter(#iter);
-                while let Some(#pat) = ::gat_std::iter::Iterator::next(&mut _iter) #body
+                use ::gat_std::__impl::{ViaLending, ViaCore};
+                use ::gat_std::iter::Iterator as _;
+                use ::core::iter::Iterator as _;
+
+                let into_iter = ::gat_std::__impl::IntoIter(#iter);
+                let mut _iter = into_iter.select().into_iter(into_iter);
+                while let Some(#pat) = #val_spanned #body
             }
         )).unwrap();
         new_expr
@@ -52,6 +63,15 @@ impl Visitor {
 
         syn::parse2::<Expr>(ts).unwrap()
     }
+
+    fn rewrite_assign_index(&mut self, expr: &ExprIndex) -> Expr {
+        let val_expr = &expr.expr;
+        let idx_expr = &expr.index;
+
+        syn::parse2::<Expr>(quote_spanned!(expr.span() =>
+            *::gat_std::ops::IndexMut::index_mut(&mut (#val_expr), #idx_expr)
+        )).unwrap()
+    }
 }
 
 impl VisitMut for Visitor {
@@ -63,6 +83,11 @@ impl VisitMut for Visitor {
             Expr::Reference(r) => {
                 if let Expr::Index(i) = &*r.expr {
                     *expr = self.rewrite_ref_index(i, r.mutability.is_some())
+                }
+            }
+            Expr::Assign(a) => {
+                if let Expr::Index(i) = &*a.left {
+                    a.left = Box::new(self.rewrite_assign_index(i))
                 }
             }
             Expr::Index(i) => {

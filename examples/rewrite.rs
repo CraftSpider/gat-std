@@ -10,7 +10,17 @@ fn main() {
     let mut b = vec![0, 1, 2];
     println!("{}", &b[0]);
 
+    b[1] = 2;
+
     let first = &mut b[0];
     *first = 1;
     println!("{:?}", b);
+
+    foo();
+}
+
+fn foo() {
+    let mut b = vec![0, 1, 2];
+    b[0] = 2;
+    println!("{:?}", b)
 }
