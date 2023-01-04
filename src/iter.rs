@@ -4,6 +4,15 @@ mod adapters;
 
 pub use adapters::*;
 
+/// # Safety:
+/// This is only safe to use if the item provided is sound to have a lifetime of `'b`.
+///
+/// This is true in cases such as the polonius borrow case and when the user is sure the value can
+/// actually live for the desired time.
+unsafe fn change_lifetime<'a, 'b, I: ?Sized + Iterator>(i: I::Item<'a>) -> I::Item<'b> {
+    unsafe { core::mem::transmute::<I::Item<'a>, I::Item<'b>>(i) }
+}
+
 /// A lending iterator, whose items may have their lifetimes tied to the individual borrow of the
 /// iterator. This allows for things like yielding mutable references that overlap, with the
 /// trade-off that there's no generic `collect` interface - the items of this iterator cannot
@@ -22,6 +31,34 @@ pub trait Iterator {
     fn size_hint(&self) -> (usize, Option<usize>) {
         (0, None)
     }
+
+    /// Advance the iterator by `n` elements
+    fn advance_by(&mut self, n: usize) -> Result<(), usize> {
+        let mut idx = 0;
+        while idx < n {
+            if let None = self.next() {
+                return Err(idx);
+            }
+            idx += 1;
+        }
+        Ok(())
+    }
+
+    /// Return the `n`th element of the iterator
+    ///
+    /// This does not rewind the iterator after completion, so repeatedly calling `nth(0)` is
+    /// equivalent to calling `next`
+    fn nth(&mut self, mut n: usize) -> Option<Self::Item<'_>> {
+        while n > 0 {
+            if let None = self.next() {
+                return None;
+            }
+            n -= 1;
+        }
+        self.next()
+    }
+
+    // Lazy Adaptors
 
     /// Take a closure which will take each value from the iterator, and yield a new value computed
     /// from it.
@@ -45,6 +82,138 @@ pub trait Iterator {
         F: FnMut(&mut Self::Item<'_>),
     {
         Touch::new(self, f)
+    }
+
+    /// Execute a closure on each item in the iterator, returning true if it should be included, or
+    /// false to skip it
+    fn filter<F>(self, f: F) -> Filter<Self, F>
+    where
+        Self: Sized,
+        F: FnMut(&Self::Item<'_>) -> bool,
+    {
+        Filter::new(self, f)
+    }
+
+    /// Creates an iterator starting at the same point, but stepping by the given amount at each
+    /// iteration
+    fn step_by(self, step: usize) -> StepBy<Self>
+    where
+        Self: Sized,
+    {
+        assert_ne!(step, 0);
+        StepBy::new(self, step)
+    }
+
+    /// Takes two iterators and creates a new iterator over both in sequence
+    fn chain<U>(self, other: U) -> Chain<Self, U::IntoIter>
+    where
+        Self: Sized,
+        U: IntoIterator,
+        U::IntoIter: for<'a> Iterator<Item<'a> = Self::Item<'a>>
+    {
+        Chain::new(self, other.into_iter())
+    }
+
+    /// ‘Zips up’ two iterators into a single iterator of pairs
+    fn zip<U>(self, other: U) -> Zip<Self, U::IntoIter>
+    where
+        Self: Sized,
+        U: IntoIterator,
+    {
+        Zip::new(self, other.into_iter())
+    }
+
+    /// Creates an iterator which gives the current iteration count as well as the next value
+    fn enumerate(self) -> Enumerate<Self>
+    where
+        Self: Sized,
+    {
+        Enumerate::new(self)
+    }
+
+    /// Creates an iterator that skips elements based on a predicate
+    fn skip_while<F>(self, f: F) -> SkipWhile<Self, F>
+    where
+        Self: Sized,
+        F: FnMut(&Self::Item<'_>) -> bool,
+    {
+        SkipWhile::new(self, f)
+    }
+
+    /// Creates an iterator that yields elements based on a predicate
+    fn take_while<F>(self, f: F) -> TakeWhile<Self, F>
+    where
+        Self: Sized,
+        F: FnMut(&Self::Item<'_>) -> bool,
+    {
+        TakeWhile::new(self, f)
+    }
+
+    /// Creates an iterator that skips the first n elements
+    fn skip(self, n: usize) -> Skip<Self>
+    where
+        Self: Sized,
+    {
+        Skip::new(self, n)
+    }
+
+    /// Creates an iterator that yields the first n elements, or fewer if the underlying iterator
+    /// ends sooner
+    fn take(self, n: usize) -> Take<Self>
+    where
+        Self: Sized,
+    {
+        Take::new(self, n)
+    }
+
+    // Consumers
+
+    /// Tests if every element of the iterator matches a predicate
+    fn all<F>(&mut self, mut f: F) -> bool
+    where
+        F: FnMut(Self::Item<'_>) -> bool,
+    {
+        while let Some(val) = self.next() {
+            if !f(val) {
+                return false;
+            }
+        }
+        true
+    }
+
+    /// Tests if any element of the iterator matches a predicate
+    fn any<F>(&mut self, mut f: F) -> bool
+    where
+        F: FnMut(Self::Item<'_>) -> bool,
+    {
+        while let Some(val) = self.next() {
+            if f(val) {
+                return true;
+            }
+        }
+        false
+    }
+
+    /// Searches for an element of an iterator that satisfies a predicate
+    fn find<F>(&mut self, mut f: F) -> Option<Self::Item<'_>>
+    where
+        F: FnMut(&Self::Item<'_>) -> bool,
+    {
+        while let Some(val) = self.next() {
+            if f(&val) {
+                // SAFETY: Polonius case
+                return Some(unsafe { change_lifetime::<Self>(val) });
+            }
+        }
+        None
+    }
+
+    /// Consume the iterator, counting the number of items and returning it
+    fn count(self) -> usize
+    where
+        Self: Sized,
+    {
+        self.fold(0, |acc, _| acc + 1)
     }
 
     /// Execute a closure on each value of this iterator
@@ -89,37 +258,41 @@ pub trait Iterator {
 
 /// Trait for values which can be converted into an [`Iterator`]
 pub trait IntoIterator {
-    /// The item yielded by the returned iterator
-    type Item<'a>
-    where
-        Self: 'a;
-
     /// The type of the returned iterator
-    type IntoIter<'a>: Iterator<Item<'a> = Self::Item<'a>>
-    where
-        Self: 'a;
+    type IntoIter: Iterator;
 
     /// Convert this value into an [`Iterator`]
-    fn into_iter<'a>(self) -> Self::IntoIter<'a>
-    where
-        Self: 'a;
+    fn into_iter(self) -> Self::IntoIter;
 }
 
 impl<T> IntoIterator for T
 where
     T: Iterator,
 {
-    type Item<'a> = T::Item<'a>
-    where
-        Self: 'a;
-    type IntoIter<'a> = T
-    where
-        Self: 'a;
+    type IntoIter = T;
 
-    fn into_iter<'a>(self) -> Self::IntoIter<'a>
-    where
-        Self: 'a
-    {
+    fn into_iter(self) -> Self::IntoIter {
         self
     }
 }
+
+/// Trait for converting a normal, non-lending iterator into a lending iterator.
+///
+/// This is useful for methods such as [`Iterator::zip`], where you may want to combine a standard
+/// iterator onto a lending one.
+pub trait IntoLending: Sized {
+    /// Convert this iterator into a lending one
+    fn into_lending(self) -> FromCore<Self>;
+}
+
+impl<I> IntoLending for I
+where
+    I: core::iter::Iterator,
+{
+    fn into_lending(self) -> FromCore<Self> {
+        FromCore(self)
+    }
+}
+
+#[cfg(test)]
+mod test;

@@ -33,7 +33,7 @@ impl Visitor {
                 use ::core::iter::Iterator as _;
 
                 let into_iter = ::gat_std::__impl::IntoIter(#iter);
-                let mut _iter = into_iter.select().into_iter(into_iter);
+                let mut _iter = (&into_iter).select().into_iter(into_iter);
                 while let Some(#pat) = #val_spanned #body
             }
         )).unwrap();

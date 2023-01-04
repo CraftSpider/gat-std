@@ -1,7 +1,7 @@
 
-use gat_std::gat_desugar;
+use gat_std::gatify;
 
-#[gat_desugar]
+#[gatify]
 fn main() {
     for a in 0..10 {
         println!("{a}");
@@ -15,12 +15,4 @@ fn main() {
     let first = &mut b[0];
     *first = 1;
     println!("{:?}", b);
-
-    foo();
-}
-
-fn foo() {
-    let mut b = vec![0, 1, 2];
-    b[0] = 2;
-    println!("{:?}", b)
 }

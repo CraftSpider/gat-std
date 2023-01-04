@@ -1,5 +1,6 @@
 
 use gat_std::iter::Iterator;
+use gat_std_proc::gatify;
 
 struct Custom(i32, i32);
 
@@ -33,14 +34,20 @@ fn main() {
         });
 }
 
-fn foo() {
-    use gat_std::__impl::{IntoIter, ViaLending, ViaCore};
+#[gatify]
+fn _foo() {
+    // STD iterator
+    for _ in 0..10 {}
+    // Lending iterator
+    for _ in Custom::new() {}
+}
 
-    let val = IntoIter(0..1);
-    let selector = (&&val).select();
-    let iter = selector.into_iter(val);
+#[gatify]
+fn _bar<T: core::iter::IntoIterator>(val: T) {
+    for _ in val {}
+}
 
-    let val = IntoIter(Custom::new());
-    let selector = (&&val).select();
-    let iter = selector.into_iter(val);
+#[gatify]
+fn _baz<T: gat_std::iter::IntoIterator>(val: T) {
+    for _ in val {}
 }

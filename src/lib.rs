@@ -1,6 +1,6 @@
 //! GAT implementations of `std` traits
 //!
-//! Traits are in the same respective paths as their `std` variants. The `gat_desugar`
+//! Traits are in the same respective paths as their `std` variants. The `gatify`
 //! macro changes operators to desugar to the traits in this crate instead of their `std`
 //! equivalents.
 
@@ -32,7 +32,21 @@
 #[cfg(feature = "alloc")]
 extern crate alloc;
 
-pub use gat_std_proc::gat_desugar;
+/// Rewrites `std` operators to use their GAT equivalents. Can be applied to any item or statement.
+///
+/// ## Index
+///
+/// The `[]` operator is converted to use the [`ops::Index`] or [`ops::IndexMut`] trait.
+/// This may not always be a perfect drop-in replacement, despite the blanket impl for
+/// [`core::ops::Index`] - if the macro can't tell which impl is expected from context, it will
+/// error out, pointing to the operator that caused the error.
+///
+/// ## For Loops
+///
+/// For loops are converted to use either [`core::iter::Iterator`] or [`iter::Iterator`], depending
+/// on which is implemented. If both are implemented, priority is given to the lending iterator.
+///
+pub use gat_std_proc::gatify;
 
 pub mod ops;
 pub mod iter;
@@ -72,7 +86,7 @@ pub mod __impl {
     pub struct Lending;
 
     impl Lending {
-        pub fn into_iter<'a, T: crate::iter::IntoIterator>(self, iter: IntoIter<T>) -> T::IntoIter<'a> {
+        pub fn into_iter<T: crate::iter::IntoIterator>(self, iter: IntoIter<T>) -> T::IntoIter {
             iter.0.into_iter()
         }
     }
