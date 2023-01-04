@@ -6,7 +6,7 @@ description = "Variants of Rust std traits that use GATs"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/CraftSpider/gat-std"
 keywords = ["GAT", "lending_iterator"]
-categories = ["no_std"]
+categories = ["no-std"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
