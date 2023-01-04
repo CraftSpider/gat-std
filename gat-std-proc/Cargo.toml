@@ -2,6 +2,11 @@
 name = "gat-std-proc"
 version = "0.1.0"
 edition = "2021"
+description = "Proc macros for gat-std"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/CraftSpider/gat-std"
+keywords = ["proc macros", "macro"]
+categories = []
 
 [lib]
 proc-macro = true
