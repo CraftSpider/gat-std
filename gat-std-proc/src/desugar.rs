@@ -19,13 +19,8 @@ impl Visitor {
         let pat = &expr.pat;
         let iter = &expr.expr;
         let body = &expr.body;
-        let val_spanned = quote_spanned!(
-            iter.span() =>
-            _iter.next()
-        );
-
         let new_expr: Expr = syn::parse2(quote_spanned!(
-            expr.span() =>
+            iter.span() =>
             #[allow(unused_imports)]
             {
                 use ::gat_std::__impl::{ViaLending, ViaCore};
@@ -34,7 +29,7 @@ impl Visitor {
 
                 let into_iter = ::gat_std::__impl::IntoIter(#iter);
                 let mut _iter = (&into_iter).select().into_iter(into_iter);
-                while let Some(#pat) = #val_spanned #body
+                while let Some(#pat) = _iter.next() #body
             }
         )).unwrap();
         new_expr
@@ -86,6 +81,11 @@ impl VisitMut for Visitor {
                 }
             }
             Expr::Assign(a) => {
+                if let Expr::Index(i) = &*a.left {
+                    a.left = Box::new(self.rewrite_assign_index(i))
+                }
+            }
+            Expr::AssignOp(a) => {
                 if let Expr::Index(i) = &*a.left {
                     a.left = Box::new(self.rewrite_assign_index(i))
                 }
