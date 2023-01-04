@@ -11,7 +11,7 @@ categories = ["no_std"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-gat-std-proc = { version = "1.0", path = "gat-std-proc" }
+gat-std-proc = { version = "0.1", path = "gat-std-proc" }
 
 [features]
 default = ["alloc"]
