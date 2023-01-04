@@ -5,7 +5,7 @@ edition = "2021"
 description = "Proc macros for gat-std"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/CraftSpider/gat-std"
-keywords = ["proc macros", "macro"]
+keywords = ["proc_macro", "macro"]
 categories = []
 
 [lib]
