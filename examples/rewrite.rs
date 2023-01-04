@@ -1,4 +1,3 @@
-
 use gat_std::gatify;
 
 #[gatify]

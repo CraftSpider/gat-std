@@ -10,6 +10,7 @@ pub use adapters::*;
 /// This is true in cases such as the polonius borrow case and when the user is sure the value can
 /// actually live for the desired time.
 unsafe fn change_lifetime<'a, 'b, I: ?Sized + Iterator>(i: I::Item<'a>) -> I::Item<'b> {
+    // SAFETY: This functions preconditions assure this is sound
     unsafe { core::mem::transmute::<I::Item<'a>, I::Item<'b>>(i) }
 }
 
@@ -36,7 +37,7 @@ pub trait Iterator {
     fn advance_by(&mut self, n: usize) -> Result<(), usize> {
         let mut idx = 0;
         while idx < n {
-            if let None = self.next() {
+            if self.next().is_none() {
                 return Err(idx);
             }
             idx += 1;
@@ -50,9 +51,7 @@ pub trait Iterator {
     /// equivalent to calling `next`
     fn nth(&mut self, mut n: usize) -> Option<Self::Item<'_>> {
         while n > 0 {
-            if let None = self.next() {
-                return None;
-            }
+            self.next()?;
             n -= 1;
         }
         self.next()
@@ -109,7 +108,7 @@ pub trait Iterator {
     where
         Self: Sized,
         U: IntoIterator,
-        U::IntoIter: for<'a> Iterator<Item<'a> = Self::Item<'a>>
+        U::IntoIter: for<'a> Iterator<Item<'a> = Self::Item<'a>>,
     {
         Chain::new(self, other.into_iter())
     }
@@ -250,7 +249,7 @@ pub trait Iterator {
     fn scan<T, B, F>(self, acc: T, f: F) -> Scan<Self, T, F>
     where
         Self: Sized,
-        F: FnMut(&mut T, Self::Item<'_>) -> Option<B>
+        F: FnMut(&mut T, Self::Item<'_>) -> Option<B>,
     {
         Scan::new(self, acc, f)
     }

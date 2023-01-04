@@ -1,4 +1,4 @@
-use super::{Iterator, change_lifetime};
+use super::{change_lifetime, Iterator};
 
 /// See [`IntoLending::into_lending`]
 pub struct FromCore<I>(pub(crate) I);
@@ -96,7 +96,7 @@ where
                 return Some(unsafe { change_lifetime::<Self>(val) });
             }
         }
-        return None;
+        None
     }
 }
 
@@ -109,7 +109,11 @@ pub struct StepBy<I> {
 
 impl<I> StepBy<I> {
     pub(crate) fn new(iter: I, step: usize) -> StepBy<I> {
-        StepBy { iter, step, first: true }
+        StepBy {
+            iter,
+            step,
+            first: true,
+        }
     }
 }
 
@@ -139,7 +143,10 @@ pub struct Chain<I1, I2> {
 
 impl<I1, I2> Chain<I1, I2> {
     pub(crate) fn new(first: I1, second: I2) -> Chain<I1, I2> {
-        Chain { first: Some(first), second: Some(second) }
+        Chain {
+            first: Some(first),
+            second: Some(second),
+        }
     }
 }
 
@@ -172,7 +179,7 @@ where
             }
             self.second = None;
         }
-        return None;
+        None
     }
 }
 
@@ -239,7 +246,10 @@ pub struct SkipWhile<I, F> {
 
 impl<I, F> SkipWhile<I, F> {
     pub(crate) fn new(iter: I, func: F) -> SkipWhile<I, F> {
-        SkipWhile { iter, func: Some(func) }
+        SkipWhile {
+            iter,
+            func: Some(func),
+        }
     }
 }
 
@@ -263,9 +273,7 @@ where
                 }
                 None
             }
-            None => {
-                self.iter.next()
-            }
+            None => self.iter.next(),
         }
     }
 }
@@ -278,7 +286,10 @@ pub struct TakeWhile<I, F> {
 
 impl<I, F> TakeWhile<I, F> {
     pub(crate) fn new(iter: I, func: F) -> TakeWhile<I, F> {
-        TakeWhile { iter, func: Some(func) }
+        TakeWhile {
+            iter,
+            func: Some(func),
+        }
     }
 }
 

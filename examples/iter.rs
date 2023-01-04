@@ -1,4 +1,3 @@
-
 use gat_std::iter::Iterator;
 use gat_std_proc::gatify;
 
@@ -28,10 +27,10 @@ impl Iterator for Custom {
 fn main() {
     let iter: Custom = Custom::new();
 
-    iter.touch(|val| { **val += 1; })
-        .for_each(|val| {
-            println!("{}", *val)
-        });
+    iter.touch(|val| {
+        **val += 1;
+    })
+    .for_each(|val| println!("{}", *val));
 }
 
 #[gatify]

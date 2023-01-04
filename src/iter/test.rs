@@ -1,4 +1,3 @@
-
 use super::*;
 
 struct LendingIter(u8, u8);
@@ -18,9 +17,7 @@ impl Iterator for LendingIter {
                 self.1 = new;
                 Some(&mut self.0)
             }
-            None => {
-                None
-            }
+            None => None,
         }
     }
 }
@@ -29,7 +26,8 @@ impl Iterator for LendingIter {
 fn iter_filter() {
     let iter = LendingIter::new();
 
-    let res = iter.touch(|a| **a += 1)
+    let res = iter
+        .touch(|a| **a += 1)
         .filter(|a| **a % 2 == 0)
         .fold(0, |acc, val| {
             assert!(*val % 2 == 0);
@@ -43,12 +41,11 @@ fn iter_filter() {
 fn iter_chain() {
     let iter = LendingIter::new();
 
-    let res = iter.chain(LendingIter::new())
-        .fold(0, |acc, a| {
-            *a += 1;
-            assert_eq!(*a, (acc % 10) + 1);
-            acc + 1
-        });
+    let res = iter.chain(LendingIter::new()).fold(0, |acc, a| {
+        *a += 1;
+        assert_eq!(*a, (acc % 10) + 1);
+        acc + 1
+    });
 
     assert_eq!(res, 20);
 }
